@@ -6,7 +6,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -33,6 +32,10 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
 import android.widget.FrameLayout;
 
+import androidx.annotation.Keep;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLoader;
@@ -58,10 +61,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import androidx.annotation.Keep;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 public class ThemesHorizontalListCell extends RecyclerListView implements NotificationCenter.NotificationCenterDelegate {
 
@@ -349,7 +348,7 @@ public class ThemesHorizontalListCell extends RecyclerListView implements Notifi
                                 String name = FileLoader.getAttachFileName(wallPaper.document);
                                 if (!loadingThemes.containsKey(name)) {
                                     loadingThemes.put(name, themeInfo);
-                                    FileLoader.getInstance(themeInfo.account).loadFile(wallPaper.document, wallPaper, 1, 1);
+                                    FileLoader.getInstance(themeInfo.account).loadFile(wallPaper.document, wallPaper, FileLoader.PRIORITY_NORMAL, 1);
                                 }
                             } else {
                                 themeInfo.badWallpaper = true;
@@ -388,7 +387,7 @@ public class ThemesHorizontalListCell extends RecyclerListView implements Notifi
                 backgroundDrawable = drawable;
                 hsv = AndroidUtilities.rgbToHsv(Color.red(themeInfo.getPreviewBackgroundColor()), Color.green(themeInfo.getPreviewBackgroundColor()), Color.blue(themeInfo.getPreviewBackgroundColor()));
             } else if (themeInfo.previewWallpaperOffset > 0 || themeInfo.pathToWallpaper != null) {
-                Bitmap wallpaper = getScaledBitmap(AndroidUtilities.dp(76), AndroidUtilities.dp(97), themeInfo.pathToWallpaper, themeInfo.pathToFile, themeInfo.previewWallpaperOffset);
+                Bitmap wallpaper = AndroidUtilities.getScaledBitmap(AndroidUtilities.dp(76), AndroidUtilities.dp(97), themeInfo.pathToWallpaper, themeInfo.pathToFile, themeInfo.previewWallpaperOffset);
                 if (wallpaper != null) {
                     backgroundDrawable = new BitmapDrawable(wallpaper);
                     bitmapShader = new BitmapShader(wallpaper, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
@@ -439,7 +438,7 @@ public class ThemesHorizontalListCell extends RecyclerListView implements Notifi
                             String name = FileLoader.getAttachFileName(themeInfo.info.document);
                             if (!loadingThemes.containsKey(name)) {
                                 loadingThemes.put(name, themeInfo);
-                                FileLoader.getInstance(themeInfo.account).loadFile(themeInfo.info.document, themeInfo.info, 1, 1);
+                                FileLoader.getInstance(themeInfo.account).loadFile(themeInfo.info.document, themeInfo.info, FileLoader.PRIORITY_NORMAL, 1);
                             }
                         }
                     } else {
@@ -796,56 +795,6 @@ public class ThemesHorizontalListCell extends RecyclerListView implements Notifi
         if (drawDivider) {
             canvas.drawLine(LocaleController.isRTL ? 0 : AndroidUtilities.dp(20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(20) : 0), getMeasuredHeight() - 1, Theme.dividerPaint);
         }
-    }
-
-    public static Bitmap getScaledBitmap(float w, float h, String path, String streamPath, int streamOffset) {
-        FileInputStream stream = null;
-        try {
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-
-            if (path != null) {
-                BitmapFactory.decodeFile(path, options);
-            } else {
-                stream = new FileInputStream(streamPath);
-                stream.getChannel().position(streamOffset);
-                BitmapFactory.decodeStream(stream, null, options);
-            }
-            if (options.outWidth > 0 && options.outHeight > 0) {
-                if (w > h && options.outWidth < options.outHeight) {
-                    float temp = w;
-                    w = h;
-                    h = temp;
-                }
-                float scale = Math.min(options.outWidth / w, options.outHeight / h);
-                options.inSampleSize = 1;
-                if (scale > 1.0f) {
-                    do {
-                        options.inSampleSize *= 2;
-                    } while (options.inSampleSize < scale);
-                }
-                options.inJustDecodeBounds = false;
-                Bitmap wallpaper;
-                if (path != null) {
-                    wallpaper = BitmapFactory.decodeFile(path, options);
-                } else {
-                    stream.getChannel().position(streamOffset);
-                    wallpaper = BitmapFactory.decodeStream(stream, null, options);
-                }
-                return wallpaper;
-            }
-        } catch (Throwable e) {
-            FileLog.e(e);
-        } finally {
-            try {
-                if (stream != null) {
-                    stream.close();
-                }
-            } catch (Exception e2) {
-                FileLog.e(e2);
-            }
-        }
-        return null;
     }
 
     @Override
